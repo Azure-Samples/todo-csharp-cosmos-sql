@@ -2,7 +2,7 @@ param environmentName string
 param location string = resourceGroup().location
 param principalId string = ''
 
-module appServicePlanResources './modules/appserviceplan-site.bicep' = {
+module appServicePlan './modules/appserviceplan-sites.bicep' = {
   name: 'appserviceplan-resources'
   params: {
     environmentName: environmentName
@@ -10,33 +10,46 @@ module appServicePlanResources './modules/appserviceplan-site.bicep' = {
   }
 }
 
-module webResources './modules/web.bicep' = {
+module web './modules/website-node.bicep' = {
   name: 'web-resources'
   params: {
     environmentName: environmentName
     location: location
+    serviceName: 'web'
   }
   dependsOn: [
-    applicationInsightsResources
-    appServicePlanResources
+    applicationInsights
+    appServicePlan
   ]
 }
 
-module apiResources './modules/api-dotnet.bicep' = {
+module api './modules/website-dotnet.bicep' = {
   name: 'api-resources'
   params: {
     environmentName: environmentName
     location: location
-    cosmosEndpoint: cosmosResources.outputs.AZURE_COSMOS_ENDPOINT
+    serviceName: 'api'
+    useKeyVault: true
   }
   dependsOn: [
-    applicationInsightsResources
-    keyVaultResources
-    appServicePlanResources
+    applicationInsights
+    keyVault
+    appServicePlan
   ]
 }
 
-module keyVaultResources './modules/keyvault.bicep' = {
+module apiCosmosConfig './modules/website-config-cosmos.bicep' = {
+  name: 'api-cosmos-config-resources'
+  params: {
+    resourceName: api.outputs.NAME
+    serviceName: 'api'
+    cosmosDatabaseName: cosmos.outputs.AZURE_COSMOS_DATABASE_NAME
+    cosmosConnectionStringKey: cosmos.outputs.AZURE_COSMOS_CONNECTION_STRING_KEY
+    cosmosEndpoint: cosmos.outputs.AZURE_COSMOS_ENDPOINT
+  }
+}
+
+module keyVault './modules/keyvault.bicep' = {
   name: 'keyvault-resources'
   params: {
     environmentName: environmentName
@@ -45,29 +58,19 @@ module keyVaultResources './modules/keyvault.bicep' = {
   }
 }
 
-module cosmosResources './modules/cosmos-sql.bicep' = {
+module cosmos './modules/cosmos-sql-db.bicep' = {
   name: 'cosmos-resources'
   params: {
     environmentName: environmentName
     location: location
-    principalId: principalId
+    principalIds: [principalId, api.outputs.IDENTITY_PRINCIPAL_ID]
   }
   dependsOn: [
-    keyVaultResources
+    keyVault
   ]
 }
 
-module apiCosmosSqlRoleResources './modules/cosmos-sql-role-assign.bicep' = {
-  name: 'api-cosmos-sql-role-resources'
-  params: {
-    environmentName: environmentName
-    location: location
-    cosmosRoleDefinitionId: cosmosResources.outputs.AZURE_COSMOS_SQL_ROLE_DEFINITION_ID
-    principalId: apiResources.outputs.API_PRINCIPAL_ID
-  }
-}
-
-module logAnalyticsWorkspaceResources './modules/loganalytics.bicep' = {
+module logAnalytics './modules/loganalytics.bicep' = {
   name: 'loganalytics-resources'
   params: {
     environmentName: environmentName
@@ -75,19 +78,19 @@ module logAnalyticsWorkspaceResources './modules/loganalytics.bicep' = {
   }
 }
 
-module applicationInsightsResources './modules/applicationinsights.bicep' = {
+module applicationInsights './modules/applicationinsights.bicep' = {
   name: 'applicationinsights-resources'
   params: {
     environmentName: environmentName
     location: location
-    workspaceId: logAnalyticsWorkspaceResources.outputs.AZURE_LOG_ANALYTICS_WORKSPACE_ID
+    workspaceId: logAnalytics.outputs.AZURE_LOG_ANALYTICS_WORKSPACE_ID
   }
 }
 
-output AZURE_COSMOS_ENDPOINT string = cosmosResources.outputs.AZURE_COSMOS_ENDPOINT
-output AZURE_COSMOS_CONNECTION_STRING_KEY string = cosmosResources.outputs.AZURE_COSMOS_CONNECTION_STRING_KEY
-output AZURE_COSMOS_DATABASE_NAME string = cosmosResources.outputs.AZURE_COSMOS_DATABASE_NAME
-output AZURE_KEY_VAULT_ENDPOINT string = keyVaultResources.outputs.AZURE_KEY_VAULT_ENDPOINT
-output APPLICATIONINSIGHTS_CONNECTION_STRING string = applicationInsightsResources.outputs.APPLICATIONINSIGHTS_CONNECTION_STRING
-output WEB_URI string = webResources.outputs.WEB_URI
-output API_URI string = apiResources.outputs.API_URI
+output AZURE_COSMOS_ENDPOINT string = cosmos.outputs.AZURE_COSMOS_ENDPOINT
+output AZURE_COSMOS_CONNECTION_STRING_KEY string = cosmos.outputs.AZURE_COSMOS_CONNECTION_STRING_KEY
+output AZURE_COSMOS_DATABASE_NAME string = cosmos.outputs.AZURE_COSMOS_DATABASE_NAME
+output AZURE_KEY_VAULT_ENDPOINT string = keyVault.outputs.AZURE_KEY_VAULT_ENDPOINT
+output APPLICATIONINSIGHTS_CONNECTION_STRING string = applicationInsights.outputs.APPLICATIONINSIGHTS_CONNECTION_STRING
+output WEB_URI string = web.outputs.URI
+output API_URI string = api.outputs.URI
