@@ -11,7 +11,7 @@ param useKeyVault bool = false
 
 var tags = { 'azd-env-name': environmentName }
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
-var abbrs = loadJsonContent('../abbreviations.json')
+var abbrs = loadJsonContent('./abbreviations.json')
 
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' existing = if (useKeyVault) {
   name: '${abbrs.keyVaultVaults}${resourceToken}'
