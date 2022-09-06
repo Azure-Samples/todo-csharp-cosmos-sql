@@ -2,7 +2,7 @@ param environmentName string
 param location string = resourceGroup().location
 param principalId string = ''
 
-module appServicePlan './modules/appserviceplan-sites.bicep' = {
+module appServicePlan '../../../../../../common/infra/bicep/modules/appserviceplan-sites.bicep' = {
   name: 'appserviceplan-resources'
   params: {
     environmentName: environmentName
@@ -10,7 +10,7 @@ module appServicePlan './modules/appserviceplan-sites.bicep' = {
   }
 }
 
-module web './modules/appservice-node.bicep' = {
+module web '../../../../../../common/infra/bicep/modules/appservice-node.bicep' = {
   name: 'web-resources'
   params: {
     environmentName: environmentName
@@ -23,7 +23,7 @@ module web './modules/appservice-node.bicep' = {
   ]
 }
 
-module api './modules/appservice-dotnet.bicep' = {
+module api '../../../../../../common/infra/bicep/modules/appservice-dotnet.bicep' = {
   name: 'api-resources'
   params: {
     environmentName: environmentName
@@ -38,7 +38,7 @@ module api './modules/appservice-dotnet.bicep' = {
   ]
 }
 
-module apiCosmosConfig './modules/appservice-config-cosmos.bicep' = {
+module apiCosmosConfig '../../../../../../common/infra/bicep/modules/appservice-config-cosmos.bicep' = {
   name: 'api-cosmos-config-resources'
   params: {
     resourceName: api.outputs.NAME
@@ -49,7 +49,7 @@ module apiCosmosConfig './modules/appservice-config-cosmos.bicep' = {
   }
 }
 
-module keyVault './modules/keyvault.bicep' = {
+module keyVault '../../../../../../common/infra/bicep/modules/keyvault.bicep' = {
   name: 'keyvault-resources'
   params: {
     environmentName: environmentName
@@ -58,7 +58,7 @@ module keyVault './modules/keyvault.bicep' = {
   }
 }
 
-module cosmos './modules/cosmos-sql-db.bicep' = {
+module cosmos '../../../../../common/infra/modules/cosmos-sql-db.bicep' = {
   name: 'cosmos-resources'
   params: {
     environmentName: environmentName
@@ -70,7 +70,7 @@ module cosmos './modules/cosmos-sql-db.bicep' = {
   ]
 }
 
-module logAnalytics './modules/loganalytics.bicep' = {
+module logAnalytics '../../../../../../common/infra/bicep/modules/loganalytics.bicep' = {
   name: 'loganalytics-resources'
   params: {
     environmentName: environmentName
@@ -78,7 +78,7 @@ module logAnalytics './modules/loganalytics.bicep' = {
   }
 }
 
-module applicationInsights './modules/applicationinsights.bicep' = {
+module applicationInsights '../../../../../../common/infra/bicep/modules/applicationinsights.bicep' = {
   name: 'applicationinsights-resources'
   params: {
     environmentName: environmentName
