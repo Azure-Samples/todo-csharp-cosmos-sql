@@ -5,11 +5,11 @@ metadata:
   template: todo-csharp-cosmos-sql@0.0.1-beta
 services:
   web:
-    project: ../../web/react-fluent
+    project: ./src/web
     dist: build
     language: js
     host: appservice
   api:
-    project: ../../api/csharp-cosmos-sql
+    project: ./src/api
     language: csharp
     host: appservice
