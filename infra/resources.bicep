@@ -2,7 +2,7 @@ param environmentName string
 param location string = resourceGroup().location
 param principalId string = ''
 
-module appServicePlan '../../../../../../common/infra/bicep/modules/appserviceplan-sites.bicep' = {
+module appServicePlan './modules/appservice/appserviceplan-sites.bicep' = {
   name: 'appserviceplan-resources'
   params: {
     environmentName: environmentName
@@ -10,7 +10,7 @@ module appServicePlan '../../../../../../common/infra/bicep/modules/appservicepl
   }
 }
 
-module web '../../../../../../common/infra/bicep/modules/appservice-node.bicep' = {
+module web './modules/appservice/appservice-node.bicep' = {
   name: 'web-resources'
   params: {
     environmentName: environmentName
@@ -23,7 +23,7 @@ module web '../../../../../../common/infra/bicep/modules/appservice-node.bicep' 
   ]
 }
 
-module api '../../../../../../common/infra/bicep/modules/appservice-dotnet.bicep' = {
+module api './modules/appservice/appservice-dotnet.bicep' = {
   name: 'api-resources'
   params: {
     environmentName: environmentName
@@ -38,7 +38,7 @@ module api '../../../../../../common/infra/bicep/modules/appservice-dotnet.bicep
   ]
 }
 
-module apiCosmosConfig '../../../../../../common/infra/bicep/modules/appservice-config-cosmos.bicep' = {
+module apiCosmosConfig './modules/appservice/appservice-config-cosmos.bicep' = {
   name: 'api-cosmos-config-resources'
   params: {
     resourceName: api.outputs.NAME
@@ -49,7 +49,7 @@ module apiCosmosConfig '../../../../../../common/infra/bicep/modules/appservice-
   }
 }
 
-module keyVault '../../../../../../common/infra/bicep/modules/keyvault.bicep' = {
+module keyVault './modules/keyvault/keyvault.bicep' = {
   name: 'keyvault-resources'
   params: {
     environmentName: environmentName
@@ -58,19 +58,32 @@ module keyVault '../../../../../../common/infra/bicep/modules/keyvault.bicep' = 
   }
 }
 
-module cosmos '../../../../../common/infra/modules/cosmos-sql-db.bicep' = {
+module cosmos './modules/cosmos/cosmos-sql-db.bicep' = {
   name: 'cosmos-resources'
   params: {
     environmentName: environmentName
     location: location
-    principalIds: [principalId, api.outputs.IDENTITY_PRINCIPAL_ID]
+    cosmosDatabaseName: 'Todo'
+    principalIds: [ principalId, api.outputs.IDENTITY_PRINCIPAL_ID ]
+    containers: [
+      {
+        name: 'TodoList'
+        id: 'TodoList'
+        partitionKey: '/id'
+      }
+      {
+        name: 'TodoItem'
+        id: 'TodoItem'
+        partitionKey: '/id'
+      }
+    ]
   }
   dependsOn: [
     keyVault
   ]
 }
 
-module logAnalytics '../../../../../../common/infra/bicep/modules/loganalytics.bicep' = {
+module logAnalytics './modules/loganalytics/loganalytics.bicep' = {
   name: 'loganalytics-resources'
   params: {
     environmentName: environmentName
@@ -78,7 +91,7 @@ module logAnalytics '../../../../../../common/infra/bicep/modules/loganalytics.b
   }
 }
 
-module applicationInsights '../../../../../../common/infra/bicep/modules/applicationinsights.bicep' = {
+module applicationInsights './modules/applicationinsights/applicationinsights.bicep' = {
   name: 'applicationinsights-resources'
   params: {
     environmentName: environmentName
