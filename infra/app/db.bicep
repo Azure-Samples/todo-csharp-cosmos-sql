@@ -18,7 +18,7 @@ param keyVaultName string
 param principalIds array = []
 
 module cosmos '../core/database/cosmos-sql-db.bicep' = {
-  name: 'cosmos-sql-resources'
+  name: 'cosmos-sql'
   params: {
     environmentName: environmentName
     location: location
