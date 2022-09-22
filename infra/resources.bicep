@@ -1,243 +1,85 @@
-param location string
+param environmentName string
+param location string = resourceGroup().location
 param principalId string = ''
-param resourceToken string
-param tags object
 
-var abbrs = loadJsonContent('./abbreviations.json')
-
-resource web 'Microsoft.Web/sites@2022-03-01' = {
-  name: '${abbrs.webSitesAppService}web-${resourceToken}'
-  location: location
-  tags: union(tags, { 'azd-service-name': 'web' })
-  properties: {
-    serverFarmId: appServicePlan.id
-    siteConfig: {
-      alwaysOn: true
-      ftpsState: 'FtpsOnly'
-    }
-    httpsOnly: true
-  }
-
-  resource appSettings 'config' = {
-    name: 'appsettings'
-    properties: {
-      SCM_DO_BUILD_DURING_DEPLOYMENT: 'false'
-      APPLICATIONINSIGHTS_CONNECTION_STRING: applicationInsightsResources.outputs.APPLICATIONINSIGHTS_CONNECTION_STRING
-    }
-  }
-
-  resource logs 'config' = {
-    name: 'logs'
-    properties: {
-      applicationLogs: {
-        fileSystem: {
-          level: 'Verbose'
-        }
-      }
-      detailedErrorMessages: {
-        enabled: true
-      }
-      failedRequestsTracing: {
-        enabled: true
-      }
-      httpLogs: {
-        fileSystem: {
-          enabled: true
-          retentionInDays: 1
-          retentionInMb: 35
-        }
-      }
-    }
-  }
-}
-
-resource api 'Microsoft.Web/sites@2022-03-01' = {
-  name: '${abbrs.webSitesAppService}api-${resourceToken}'
-  location: location
-  tags: union(tags, { 'azd-service-name': 'api' })
-  kind: 'app,linux'
-  properties: {
-    serverFarmId: appServicePlan.id
-    siteConfig: {
-      alwaysOn: true
-      ftpsState: 'FtpsOnly'
-    }
-    httpsOnly: true
-  }
-
-  identity: {
-    type: 'SystemAssigned'
-  }
-
-  resource appSettings 'config' = {
-    name: 'appsettings'
-    properties: {
-      AZURE_COSMOS_ENDPOINT: cosmos.properties.documentEndpoint
-      AZURE_COSMOS_DATABASE_NAME: cosmos::database.name
-      APPLICATIONINSIGHTS_CONNECTION_STRING: applicationInsightsResources.outputs.APPLICATIONINSIGHTS_CONNECTION_STRING
-    }
-  }
-
-  resource logs 'config' = {
-    name: 'logs'
-    properties: {
-      applicationLogs: {
-        fileSystem: {
-          level: 'Verbose'
-        }
-      }
-      detailedErrorMessages: {
-        enabled: true
-      }
-      failedRequestsTracing: {
-        enabled: true
-      }
-      httpLogs: {
-        fileSystem: {
-          enabled: true
-          retentionInDays: 1
-          retentionInMb: 35
-        }
-      }
-    }
-  }
-}
-
-resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
-  name: '${abbrs.webServerFarms}${resourceToken}'
-  location: location
-  tags: tags
-  sku: {
-    name: 'B1'
-  }
-  properties: {}
-}
-
-resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2021-12-01-preview' = {
-  name: '${abbrs.operationalInsightsWorkspaces}${resourceToken}'
-  location: location
-  tags: tags
-  properties: any({
-    retentionInDays: 30
-    features: {
-      searchVersion: 1
-    }
-    sku: {
-      name: 'PerGB2018'
-    }
-  })
-}
-
-module applicationInsightsResources './applicationinsights.bicep' = {
-  name: 'applicationinsights-resources'
+// The application frontend
+module web './app/web.bicep' = {
+  name: 'web'
   params: {
-    resourceToken: resourceToken
+    environmentName: environmentName
     location: location
-    tags: tags
-    workspaceId: logAnalyticsWorkspace.id
+    applicationInsightsName: monitoring.outputs.applicationInsightsName
+    appServicePlanId: appServicePlan.outputs.appServicePlanId
   }
 }
 
-resource cosmos 'Microsoft.DocumentDB/databaseAccounts@2022-05-15' = {
-  name: '${abbrs.documentDBDatabaseAccounts}${resourceToken}'
-  location: location
-  tags: tags
-  properties: {
-    locations: [
-      {
-        locationName: location
-        failoverPriority: 0
-        isZoneRedundant: false
-      }
-    ]
-    databaseAccountOfferType: 'Standard'
-  }
-
-  resource database 'sqlDatabases' = {
-    name: 'Todo'
-    properties: {
-      resource: {
-        id: 'Todo'
-      }
-    }
-
-    resource list 'containers' = {
-      name: 'TodoList'
-      properties: {
-        resource: {
-          id: 'TodoList'
-          partitionKey: {
-            paths: [
-              '/id'
-            ]
-          }
-        }
-        options: {}
-      }
-    }
-
-    resource item 'containers' = {
-      name: 'TodoItem'
-      properties: {
-        resource: {
-          id: 'TodoItem'
-          partitionKey: {
-            paths: [
-              '/id'
-            ]
-          }
-        }
-        options: {}
-      }
-    }
-  }
-
-  resource roleDefinition 'sqlroleDefinitions' = {
-    name: guid(cosmos.id, resourceToken, 'sql-role')
-    properties: {
-      assignableScopes: [
-        cosmos.id
-      ]
-      permissions: [
-        {
-          dataActions: [
-            'Microsoft.DocumentDB/databaseAccounts/readMetadata'
-            'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/items/*'
-            'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/*'
-          ]
-          notDataActions: []
-        }
-      ]
-      roleName: 'Reader Writer'
-      type: 'CustomRole'
-    }
-  }
-
-  resource userRole 'sqlRoleAssignments' = if (!empty(principalId)) {
-    name: guid(roleDefinition.id, principalId, cosmos.id)
-    properties: {
-      principalId: principalId
-      roleDefinitionId: roleDefinition.id
-      scope: cosmos.id
-    }
-  }
-
-  resource appRole 'sqlRoleAssignments' = {
-    name: guid(roleDefinition.id, api.id, cosmos.id)
-    properties: {
-      principalId: api.identity.principalId
-      roleDefinitionId: roleDefinition.id
-      scope: cosmos.id
-    }
-
-    dependsOn: [
-      userRole
-    ]
+// The application backend
+module api './app/api.bicep' = {
+  name: 'api'
+  params: {
+    environmentName: environmentName
+    location: location
+    applicationInsightsName: monitoring.outputs.applicationInsightsName
+    appServicePlanId: appServicePlan.outputs.appServicePlanId
+    keyVaultName: keyVault.outputs.keyVaultName
+    allowedOrigins: [ web.outputs.WEB_URI ]
   }
 }
 
-output AZURE_COSMOS_ENDPOINT string = cosmos.properties.documentEndpoint
-output AZURE_COSMOS_DATABASE_NAME string = cosmos::database.name
-output APPLICATIONINSIGHTS_CONNECTION_STRING string = applicationInsightsResources.outputs.APPLICATIONINSIGHTS_CONNECTION_STRING
-output WEB_URI string = 'https://${web.properties.defaultHostName}'
-output API_URI string = 'https://${api.properties.defaultHostName}'
+// The application database
+module cosmos './app/db.bicep' = {
+  name: 'cosmos'
+  params: {
+    environmentName: environmentName
+    location: location
+    keyVaultName: keyVault.outputs.keyVaultName
+    principalIds: [ principalId, api.outputs.API_IDENTITY_PRINCIPAL_ID ]
+  }
+}
+
+// Configure api to use cosmos
+module apiCosmosConfig './core/host/appservice-config-cosmos.bicep' = {
+  name: 'api-cosmos-config'
+  params: {
+    appServiceName: api.outputs.API_NAME
+    cosmosDatabaseName: cosmos.outputs.cosmosDatabaseName
+    cosmosConnectionStringKey: cosmos.outputs.cosmosConnectionStringKey
+    cosmosEndpoint: cosmos.outputs.cosmosEndpoint
+  }
+}
+
+// Create an App Service Plan to group applications under the same payment plan and SKU
+module appServicePlan './core/host/appserviceplan-sites.bicep' = {
+  name: 'appserviceplan'
+  params: {
+    environmentName: environmentName
+    location: location
+  }
+}
+
+// Store secrets in a keyvault
+module keyVault './core/security/keyvault.bicep' = {
+  name: 'keyvault'
+  params: {
+    environmentName: environmentName
+    location: location
+    principalId: principalId
+  }
+}
+
+// Monitor application with Azure Monitor
+module monitoring './core/monitor/monitoring.bicep' = {
+  name: 'monitoring'
+  params: {
+    environmentName: environmentName
+    location: location
+  }
+}
+
+output API_URI string = api.outputs.API_URI
+output APPLICATIONINSIGHTS_CONNECTION_STRING string = monitoring.outputs.applicationInsightsConnectionString
+output AZURE_COSMOS_CONNECTION_STRING_KEY string = cosmos.outputs.cosmosConnectionStringKey
+output AZURE_COSMOS_DATABASE_NAME string = cosmos.outputs.cosmosDatabaseName
+output AZURE_COSMOS_ENDPOINT string = cosmos.outputs.cosmosEndpoint
+output AZURE_KEY_VAULT_ENDPOINT string = keyVault.outputs.keyVaultEndpoint
+output WEB_URI string = web.outputs.WEB_URI
