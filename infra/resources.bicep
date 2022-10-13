@@ -49,11 +49,14 @@ module apiCosmosConfig './core/host/appservice-config-cosmos.bicep' = {
 }
 
 // Create an App Service Plan to group applications under the same payment plan and SKU
-module appServicePlan './core/host/appserviceplan-sites.bicep' = {
+module appServicePlan './core/host/appserviceplan.bicep' = {
   name: 'appserviceplan'
   params: {
     environmentName: environmentName
     location: location
+    sku: {
+      name: 'B1'
+    }
   }
 }
 
