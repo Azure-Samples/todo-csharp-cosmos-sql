@@ -32,3 +32,4 @@ module cosmos '../core/database/cosmos/sql/cosmos-sql-db.bicep' = {
 output cosmosConnectionStringKey string = cosmos.outputs.cosmosConnectionStringKey
 output cosmosDatabaseName string = cosmosDatabaseName
 output cosmosEndpoint string = cosmos.outputs.cosmosEndpoint
+output cosmosSqlRoleDefinitionId string = cosmos.outputs.cosmosSqlRoleDefinitionId
