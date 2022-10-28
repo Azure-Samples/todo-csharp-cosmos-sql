@@ -15,9 +15,11 @@ param containers array = [
   }
 ]
 
-param databaseName string = 'Todo'
+param databaseName string = ''
 param keyVaultName string
 param principalIds array = []
+
+var defaultDatabaseName = 'Todo'
 
 module cosmos '../core/database/cosmos/sql/cosmos-sql-db.bicep' = {
   name: 'cosmos-sql'
@@ -26,7 +28,7 @@ module cosmos '../core/database/cosmos/sql/cosmos-sql-db.bicep' = {
     location: location
     tags: tags
     containers: containers
-    databaseName: !empty(databaseName) ? databaseName : 'Todo'
+    databaseName: !empty(databaseName) ? databaseName : defaultDatabaseName
     keyVaultName: keyVaultName
     principalIds: principalIds
   }
