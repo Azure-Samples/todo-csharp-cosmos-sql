@@ -26,7 +26,7 @@ module cosmos '../core/database/cosmos/sql/cosmos-sql-db.bicep' = {
     location: location
     tags: tags
     containers: containers
-    databaseName: databaseName
+    databaseName: !empty(databaseName) ? databaseName : 'Todo'
     keyVaultName: keyVaultName
     principalIds: principalIds
   }
