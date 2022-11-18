@@ -23,9 +23,10 @@ param keyVaultName string = ''
 param logAnalyticsName string = ''
 param resourceGroupName string = ''
 param webServiceName string = ''
+param apimServiceName string = ''
 
-@description('Flag to use Azure API Management to mediate the calls between the frontend and the backend API')
-param useAPIM bool = true
+@description('Flag to use Azure API Management to mediate the calls between the Web frontend and the backend API')
+param useAPIM bool = false
 
 @description('Id of the user or app to assign application roles')
 param principalId string = ''
@@ -95,6 +96,17 @@ module apiCosmosSqlRoleAssign './core/database/cosmos/sql/cosmos-sql-role-assign
   }
 }
 
+// Give the API the role to access Cosmos
+module userComsosSqlRoleAssign './core/database/cosmos/sql/cosmos-sql-role-assign.bicep' = if (principalId != '') {
+  name: 'user-cosmos-access'
+  scope: rg
+  params: {
+    accountName: cosmos.outputs.accountName
+    roleDefinitionId: cosmos.outputs.roleDefinitionId
+    principalId: principalId
+  }
+}
+
 // The application database
 module cosmos './app/db.bicep' = {
   name: 'cosmos'
@@ -144,26 +156,18 @@ module monitoring './core/monitor/monitoring.bicep' = {
     logAnalyticsName: !empty(logAnalyticsName) ? logAnalyticsName : '${abbrs.operationalInsightsWorkspaces}${resourceToken}'
     applicationInsightsName: !empty(applicationInsightsName) ? applicationInsightsName : '${abbrs.insightsComponents}${resourceToken}'
     applicationInsightsDashboardName: !empty(applicationInsightsDashboardName) ? applicationInsightsDashboardName : '${abbrs.portalDashboards}${resourceToken}'
-    useAPIM: useAPIM
   }
 }
 
-resource appInsightsService 'Microsoft.ApiManagement/service@2021-08-01' existing = {
-  name: monitoring.outputs.applicationInsightsName
-  scope: rg
-}
-
 // Creates Azure API Management (APIM) service to mediate the requests between the frontend and the backend API
-module apim './core/host/apim.bicep' = if (useAPIM) {
+module apim './core/gateway/apim.bicep' = if (useAPIM) {
   name: 'apim-deployment'
   scope: rg
   params: {
-    name: 'apim-${resourceToken}'
+    name: !empty(apimServiceName) ? apimServiceName : '${abbrs.apiManagementService}${resourceToken}'
     location: location
-    sku: 'Consumption'
-    skuCount: 0
-    appInsightsResourceId: appInsightsService.id
-    appInsightsInstrumentationKey: monitoring.outputs.applicationInsightsInstrumentationKey 
+    tags: tags
+    applicationInsightsName: monitoring.outputs.applicationInsightsName
   }
 }
 
@@ -172,16 +176,18 @@ module apimApi './app/apim-api.bicep' = if (useAPIM) {
   name: 'apim-api-deployment'
   scope: rg
   params: {
-    name: 'apim-${resourceToken}'
+    name: apim.outputs.apimServiceName
     apiName: 'todo-api'
     apiDisplayName: 'Simple Todo API'
     apiDescription: 'This is a simple Todo API'
     apiPath: 'todo'
+    webFrontendUrl: web.outputs.SERVICE_WEB_URI
     apiBackendUrl: api.outputs.SERVICE_API_URI
   }
 }
 
 // Data outputs
+output AZURE_COSMOS_ENDPOINT string = cosmos.outputs.endpoint
 output AZURE_COSMOS_CONNECTION_STRING_KEY string = cosmos.outputs.connectionStringKey
 output AZURE_COSMOS_DATABASE_NAME string = cosmos.outputs.databaseName
 
@@ -191,6 +197,7 @@ output AZURE_KEY_VAULT_ENDPOINT string = keyVault.outputs.endpoint
 output AZURE_KEY_VAULT_NAME string = keyVault.outputs.name
 output AZURE_LOCATION string = location
 output AZURE_TENANT_ID string = tenant().tenantId
-output REACT_APP_API_BASE_URL string = useAPIM?apimApi.outputs.SERVICE_API_URI:api.outputs.SERVICE_API_URI
+output REACT_APP_API_BASE_URL string = useAPIM ? apimApi.outputs.SERVICE_API_URI : api.outputs.SERVICE_API_URI
 output REACT_APP_APPLICATIONINSIGHTS_CONNECTION_STRING string = monitoring.outputs.applicationInsightsConnectionString
 output REACT_APP_WEB_BASE_URL string = web.outputs.SERVICE_WEB_URI
+output USE_APIM string = useAPIM ? 'true' : 'false'
