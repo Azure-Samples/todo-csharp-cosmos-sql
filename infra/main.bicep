@@ -177,7 +177,7 @@ module apimApi './app/apim-api.bicep' = if (useAPIM == 'true') {
   name: 'apim-api-deployment'
   scope: rg
   params: {
-    name: apim.outputs.apimServiceName
+    name: useAPIM == 'true' ? apim.outputs.apimServiceName : ''
     apiName: 'todo-api'
     apiDisplayName: 'Simple Todo API'
     apiDescription: 'This is a simple Todo API'
