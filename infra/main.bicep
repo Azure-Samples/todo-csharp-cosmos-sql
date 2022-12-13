@@ -72,7 +72,7 @@ module api './app/api.bicep' = {
 }
 
 // Give the API access to KeyVault
-module apiKeyVaultAccess './core/security/keyvault-access.bicep' = {
+module apiKeyVaultAccess 'br:publicazdbicepmodules.azurecr.io/bicep/staging/core/security/keyvault-access:v1.0' = {
   name: 'api-keyvault-access'
   scope: rg
   params: {
@@ -82,7 +82,7 @@ module apiKeyVaultAccess './core/security/keyvault-access.bicep' = {
 }
 
 // Give the API the role to access Cosmos
-module apiCosmosSqlRoleAssign './core/database/cosmos/sql/cosmos-sql-role-assign.bicep' = {
+module apiCosmosSqlRoleAssign 'br:publicazdbicepmodules.azurecr.io/bicep/staging/core/database/cosmos/sql/cosmos-sql-role-assign:v1.0' = {
   name: 'api-cosmos-access'
   scope: rg
   params: {
@@ -93,7 +93,7 @@ module apiCosmosSqlRoleAssign './core/database/cosmos/sql/cosmos-sql-role-assign
 }
 
 // Give the API the role to access Cosmos
-module userComsosSqlRoleAssign './core/database/cosmos/sql/cosmos-sql-role-assign.bicep' = if (principalId != '') {
+module userComsosSqlRoleAssign 'br:publicazdbicepmodules.azurecr.io/bicep/staging/core/database/cosmos/sql/cosmos-sql-role-assign:v1.0' = if (principalId != '') {
   name: 'user-cosmos-access'
   scope: rg
   params: {
@@ -117,7 +117,7 @@ module cosmos './app/db.bicep' = {
 }
 
 // Create an App Service Plan to group applications under the same payment plan and SKU
-module appServicePlan './core/host/appserviceplan.bicep' = {
+module appServicePlan 'br:publicazdbicepmodules.azurecr.io/bicep/staging/core/host/appserviceplan:v1.0' = {
   name: 'appserviceplan'
   scope: rg
   params: {
@@ -131,7 +131,7 @@ module appServicePlan './core/host/appserviceplan.bicep' = {
 }
 
 // Store secrets in a keyvault
-module keyVault './core/security/keyvault.bicep' = {
+module keyVault 'br:publicazdbicepmodules.azurecr.io/bicep/staging/core/security/keyvault:v1.0' = {
   name: 'keyvault'
   scope: rg
   params: {
@@ -143,7 +143,7 @@ module keyVault './core/security/keyvault.bicep' = {
 }
 
 // Monitor application with Azure Monitor
-module monitoring './core/monitor/monitoring.bicep' = {
+module monitoring 'br:publicazdbicepmodules.azurecr.io/bicep/staging/core/monitor/monitoring:v1.0' = {
   name: 'monitoring'
   scope: rg
   params: {
