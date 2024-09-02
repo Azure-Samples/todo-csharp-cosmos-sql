@@ -84,6 +84,7 @@ module api './app/api-avm.bicep' = {
       AZURE_COSMOS_DATABASE_NAME: actualDatabaseName
       AZURE_COSMOS_ENDPOINT: cosmos.outputs.endpoint
       API_ALLOW_ORIGINS: web.outputs.SERVICE_WEB_URI
+      SCM_DO_BUILD_DURING_DEPLOYMENT: false
     }
     appInsightResourceId: applicationInsights.outputs.resourceId
     linuxFxVersion: 'dotnetcore|8.0'
