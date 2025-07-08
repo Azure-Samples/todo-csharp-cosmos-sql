@@ -125,13 +125,13 @@ module cosmos './app/db-avm.bicep' = {
   }
 }
 
-// Give the API access to Cosmos using the custom writer role definition
-resource apiCosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15' = {
-  name: '${cosmos.outputs.accountName}/${guid(api.outputs.SERVICE_API_IDENTITY_PRINCIPAL_ID, cosmos.outputs.accountName, 'writer')}'
-  properties: {
-    roleDefinitionId: '${resourceGroup().id}/providers/Microsoft.DocumentDB/databaseAccounts/${cosmos.outputs.accountName}/sqlRoleDefinitions/writer'
-    principalId: api.outputs.SERVICE_API_IDENTITY_PRINCIPAL_ID
-    scope: '${resourceGroup().id}/providers/Microsoft.DocumentDB/databaseAccounts/${cosmos.outputs.accountName}'
+// Give the API access to Cosmos using a separate role assignment
+module apiCosmosRoleAssignment './app/cosmos-role-assignment.bicep' = {
+  name: 'api-cosmos-role'
+  scope: rg
+  params: {
+    cosmosAccountName: cosmos.outputs.accountName
+    apiPrincipalId: api.outputs.SERVICE_API_IDENTITY_PRINCIPAL_ID
   }
 }
 
