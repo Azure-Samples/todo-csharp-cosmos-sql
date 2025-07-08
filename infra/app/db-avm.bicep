@@ -1,9 +1,7 @@
 param accountName string
 param location string = resourceGroup().location
 param tags object = {}
-param connectionStringKey string = 'AZURE-COSMOS-CONNECTION-STRING'
 param databaseName string = ''
-param keyVaultResourceId string
 param principalId string = ''
 
 @allowed([
@@ -30,10 +28,7 @@ module cosmos 'br/public:avm/res/document-db/database-account:0.6.0' = {
         isZoneRedundant: false
       }
     ]
-    secretsExportConfiguration:{
-      keyVaultResourceId: keyVaultResourceId
-      primaryWriteConnectionStringSecretName: connectionStringKey
-    }
+
     capabilitiesToAdd: [ 'EnableServerless' ] 
     automaticFailover: false
     sqlDatabases: [
@@ -61,6 +56,5 @@ module cosmos 'br/public:avm/res/document-db/database-account:0.6.0' = {
 }
 
 output accountName string = cosmos.outputs.name
-output connectionStringKey string = connectionStringKey
 output databaseName string = actualDatabaseName
 output endpoint string = cosmos.outputs.endpoint
