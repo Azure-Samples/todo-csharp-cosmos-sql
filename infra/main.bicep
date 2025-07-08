@@ -74,7 +74,6 @@ module api './app/api-appservice-avm.bicep' = {
     }
     appSettings: {
       AZURE_KEY_VAULT_ENDPOINT: keyVault.outputs.uri
-      AZURE_COSMOS_CONNECTION_STRING_KEY: cosmos.outputs.connectionStringKey
       AZURE_COSMOS_DATABASE_NAME: cosmos.outputs.databaseName
       AZURE_COSMOS_ENDPOINT: cosmos.outputs.endpoint
       API_ALLOW_ORIGINS: web.outputs.SERVICE_WEB_URI
@@ -121,27 +120,21 @@ module cosmos './app/db-avm.bicep' = {
     accountName: !empty(cosmosAccountName) ? cosmosAccountName : '${abbrs.documentDBDatabaseAccounts}${resourceToken}'
     location: location
     tags: tags
-    keyVaultResourceId: keyVault.outputs.resourceId
     principalId: principalId
     backupPolicyType: 'Periodic'
   }
 }
 
-// Give the API the role to access Cosmos
-module apiCosmosSqlRoleAssign 'br/public:avm/res/document-db/database-account:0.5.5' = {
-  name: 'api-cosmos-access'
+// Give the API access to Cosmos using a separate role assignment
+module apiCosmosRoleAssignment './app/cosmos-role-assignment.bicep' = {
+  name: 'api-cosmos-role'
   scope: rg
   params: {
-    name: cosmos.outputs.accountName
-    location: location
-    sqlRoleAssignmentsPrincipalIds: [ api.outputs.SERVICE_API_IDENTITY_PRINCIPAL_ID ]
-    sqlRoleDefinitions: [
-      {
-        name: 'writer'
-      }
-    ]
+    cosmosAccountName: cosmos.outputs.accountName
+    apiPrincipalId: api.outputs.SERVICE_API_IDENTITY_PRINCIPAL_ID
   }
 }
+
 
 // Create an App Service Plan to group applications under the same payment plan and SKU
 module appServicePlan 'br/public:avm/res/web/serverfarm:0.1.1' = {
@@ -237,7 +230,6 @@ module apimApi 'br/public:avm/ptn/azd/apim-api:0.1.0' = if (useAPIM) {
 
 // Data outputs
 output AZURE_COSMOS_ENDPOINT string = cosmos.outputs.endpoint
-output AZURE_COSMOS_CONNECTION_STRING_KEY string = cosmos.outputs.connectionStringKey
 output AZURE_COSMOS_DATABASE_NAME string = cosmos.outputs.databaseName
 
 // App outputs
