@@ -125,21 +125,16 @@ module cosmos './app/db-avm.bicep' = {
   }
 }
 
-// Give the API the role to access Cosmos
-module apiCosmosSqlRoleAssign 'br/public:avm/res/document-db/database-account:0.5.5' = {
-  name: 'api-cosmos-access'
-  scope: rg
-  params: {
-    name: cosmos.outputs.accountName
-    location: location
-    sqlRoleAssignmentsPrincipalIds: [ api.outputs.SERVICE_API_IDENTITY_PRINCIPAL_ID ]
-    sqlRoleDefinitions: [
-      {
-        name: 'writer'
-      }
-    ]
+// Give the API access to Cosmos using the custom writer role definition
+resource apiCosmosRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15' = {
+  name: '${cosmos.outputs.accountName}/${guid(api.outputs.SERVICE_API_IDENTITY_PRINCIPAL_ID, cosmos.outputs.accountName, 'writer')}'
+  properties: {
+    roleDefinitionId: '${resourceGroup().id}/providers/Microsoft.DocumentDB/databaseAccounts/${cosmos.outputs.accountName}/sqlRoleDefinitions/writer'
+    principalId: api.outputs.SERVICE_API_IDENTITY_PRINCIPAL_ID
+    scope: '${resourceGroup().id}/providers/Microsoft.DocumentDB/databaseAccounts/${cosmos.outputs.accountName}'
   }
 }
+
 
 // Create an App Service Plan to group applications under the same payment plan and SKU
 module appServicePlan 'br/public:avm/res/web/serverfarm:0.1.1' = {
