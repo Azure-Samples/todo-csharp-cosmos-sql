@@ -21,6 +21,7 @@ module cosmos 'br/public:avm/res/document-db/database-account:0.6.0' = {
     location: location
     tags: tags
     backupPolicyType: backupPolicyType
+    disableLocalAuth: true
     locations: [
       {
         failoverPriority: 0
