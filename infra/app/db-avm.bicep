@@ -48,11 +48,6 @@ module cosmos 'br/public:avm/res/document-db/database-account:0.6.0' = {
       }
     ] 
     sqlRoleAssignmentsPrincipalIds: [ principalId ]
-    sqlRoleDefinitions: [
-      {
-        name: 'writer'
-      }
-    ]
   }
 }
 
